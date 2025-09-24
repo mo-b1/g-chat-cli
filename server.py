@@ -4,20 +4,19 @@ import socket
 import sys
 import json
 from records import database_manager
-import pygame
 import time
 
-pygame.init()
+
 
 
 def threaded_client(conn):
     name = None
     password = None
 
-    clock = pygame.time.Clock()
+
     try:
         while True:
-            clock.tick()
+
             data = json.loads(conn.recv(4096).decode())
             print("message: ", data)
 
