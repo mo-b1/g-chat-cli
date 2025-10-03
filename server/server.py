@@ -4,15 +4,13 @@ import socket
 import sys
 import json
 from records import database_manager
+import pygame
 import time
-
-
 
 
 def threaded_client(conn):
     name = None
     password = None
-
 
     try:
         while True:
@@ -50,8 +48,15 @@ def threaded_client(conn):
 
             elif data[0].lower() == "add":
                 conn.send(json.dumps(    records.add_task(records.add_contact,name, data[1], wait_for_result=True)).encode())
-            print("current database: ", records.data)
 
+            elif data[0].lower() == "logout":
+
+                name = None
+                password = None
+                conn.send(json.dumps("Logout successful").encode())
+                break
+
+            print("current database: ", records.data)
             records.add_task(records.save_data, wait_for_result=False)
 
 

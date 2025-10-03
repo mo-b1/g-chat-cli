@@ -1,12 +1,15 @@
+import base64
 import json
 import queue
 import threading
 import time
+from argon2 import PasswordHasher
+import os
 
 class database_manager:
     def __init__(self):
         self.data = {}
-        self.file = "database.json"
+        self.file = "server/database.json"
 
         self.task_queue = queue.Queue()
         self.result_queue = queue.Queue()
@@ -14,6 +17,7 @@ class database_manager:
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.thread.start()
+        self.ph = PasswordHasher()
 
     def _run(self):
 
@@ -62,12 +66,16 @@ class database_manager:
         with open(self.file, "w") as f:
             json.dump(self.data, f, indent=2)
 
+    def new_user(self, name, password):
+        if name not in self.data:
+            self.data[name] = {"password": self.ph.hash(password), "contacts": {}}
+            self.save_data()
+            return True
+        return False
 
     def validator(self, name, password):
         if name in self.data:
-            if self.data[name]["password"] == password:
-                return True
-        return False
+            return self.ph.verify(self.data[name]["password"], password)
 
 
     def save_message(self, sender, receiver, message, time):
@@ -78,9 +86,11 @@ class database_manager:
             if sender in self.data[receiver]["contacts"]:
                 self.data[receiver]["contacts"][sender]["from"].append(message)
                 self.data[receiver]["contacts"][sender]["from"].append(time)
+        self.save_data()
 
     def remove_contact(self, user, contact):
         del self.data[user]["contacts"][contact]
+        self.save_data()
 
     def add_contact(self, user, contact):
         if  contact == user:
@@ -92,20 +102,18 @@ class database_manager:
             self.data[user]["contacts"][contact] = {}
             self.data[user]["contacts"][contact]["to"] = []
             self.data[user]["contacts"][contact]["from"] = []
+            self.save_data()
             return f"Successfully added {contact}!"
         return "Already added!"
 
-    def new_user(self, name, password):
-        if name not in self.data:
-            self.data[name] = {"password": password, "contacts": {}}
-            return True
-        return False
+
+
 
     def is_Contact (self, user, name):
         if name in self.data[user]["contacts"]:
             return True
         else:
-            return "Contact doesn't exist"
+            return False
 
     def retrieve_messages(self, user, contact):
         if contact in self.data[user]["contacts"]:
